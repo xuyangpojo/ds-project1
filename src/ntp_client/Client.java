@@ -18,7 +18,7 @@ public class Client
     private static final int NTP_Port = 123;
     private static final int NTP_PACKET_SIZE = 48;
     private static final long SeventyYears = 2208988800L;
-    private static final int SOCKET_TIMEOUT_MS = 500;
+    private static final int SOCKET_TIMEOUT_MS = 5000; // 增加到5秒，避免网络延迟导致的超时
     
     private DatagramSocket m_TimeService_Socket;
     private InetAddress m_TimeService_IPAddress;
@@ -201,6 +201,12 @@ public class Client
         try
         {
             m_TimeService_Socket.receive(RecvPacket);
+        }
+        catch (SocketTimeoutException Ex)
+        {
+            System.err.println("接收超时: 服务器在" + SOCKET_TIMEOUT_MS + "ms内未响应。请检查网络连接或尝试其他服务器。");
+            NTP_Timestamp.lUnixTime = 0;
+            return NTP_Timestamp;
         }
         catch (Exception Ex)
         {

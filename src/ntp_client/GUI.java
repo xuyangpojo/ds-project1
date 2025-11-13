@@ -173,10 +173,15 @@ public class GUI extends javax.swing.JFrame implements ActionListener
                             break;
                             
                         case NTP_ServerAddressNotSet:
+                            // 服务器地址未设置，不计数
                             break;
                         case NTP_SendFailed:
+                            // 发送失败，增加请求计数并更新统计
+                            m_iNumRequestsSent++;
+                            UpdateStatisticsDisplay();
                             break;
                         case NTP_ReceiveFailed:
+                            // 接收失败，增加请求计数并更新统计
                             m_iNumRequestsSent++;
                             UpdateStatisticsDisplay();
                             break;
@@ -190,41 +195,39 @@ public class GUI extends javax.swing.JFrame implements ActionListener
     {
         m_listModel_NTPServerList.clear();
         m_listModel_LocationList.clear();
-        m_listModel_NTPServerList.addElement("time.nist.gov");
-        m_listModel_LocationList.addElement("NIST round robin load equalisation");
         
+        // 国内常用服务器
+        m_listModel_NTPServerList.addElement("ntp.aliyun.com");
+        m_listModel_LocationList.addElement("阿里云NTP服务器（推荐）");
+        
+        m_listModel_NTPServerList.addElement("ntp1.aliyun.com");
+        m_listModel_LocationList.addElement("阿里云NTP服务器（备用）");
+        
+        m_listModel_NTPServerList.addElement("cn.pool.ntp.org");
+        m_listModel_LocationList.addElement("NTP Pool中国区域");
+        
+        m_listModel_NTPServerList.addElement("pool.ntp.org");
+        m_listModel_LocationList.addElement("NTP Pool（自动选择最近服务器）");
+        
+        // 国际常用服务器（国内通常可访问）
         m_listModel_NTPServerList.addElement("time.windows.com");
-        m_listModel_LocationList.addElement("Windows Time service");
+        m_listModel_LocationList.addElement("微软Windows时间服务器");
         
-        m_listModel_NTPServerList.addElement("nist1-atl.ustiming.org");
-        m_listModel_LocationList.addElement("Atlanta, Georgia");
+        m_listModel_NTPServerList.addElement("time.apple.com");
+        m_listModel_LocationList.addElement("苹果时间服务器");
         
-        m_listModel_NTPServerList.addElement("wolfnisttime.com");
-        m_listModel_LocationList.addElement("Birmingham, Alabama");
+        m_listModel_NTPServerList.addElement("time.cloudflare.com");
+        m_listModel_LocationList.addElement("Cloudflare时间服务器");
         
-        m_listModel_NTPServerList.addElement("nist1-chi.ustiming.org");
-        m_listModel_LocationList.addElement("Chicago, Illinois");
+        // NTP Pool不同层级
+        m_listModel_NTPServerList.addElement("0.pool.ntp.org");
+        m_listModel_LocationList.addElement("NTP Pool（Stratum 0）");
         
-        m_listModel_NTPServerList.addElement("nist1-lnk.binary.net");
-        m_listModel_LocationList.addElement("Lincoln, Nebraska");
+        m_listModel_NTPServerList.addElement("1.pool.ntp.org");
+        m_listModel_LocationList.addElement("NTP Pool（Stratum 1）");
         
-        m_listModel_NTPServerList.addElement("time-a.timefreq.bldrdoc.gov");
-        m_listModel_LocationList.addElement("NIST, Boulder, Colorado");
-        
-        m_listModel_NTPServerList.addElement("ntp-nist.ldsbc.edu");
-        m_listModel_LocationList.addElement("LDSBC, Salt Lake City, Utah");
-        
-        m_listModel_NTPServerList.addElement("nist1-lv.ustiming.org");
-        m_listModel_LocationList.addElement("Las Vegas, Nevada");
-        
-        m_listModel_NTPServerList.addElement("nist1-la.ustiming.org");
-        m_listModel_LocationList.addElement("Los Angeles, California");
-        
-        m_listModel_NTPServerList.addElement("nist1-ny.ustiming.org");
-        m_listModel_LocationList.addElement("New York City, NY");
-        
-        m_listModel_NTPServerList.addElement("nist1-nj.ustiming.org");
-        m_listModel_LocationList.addElement("Bridgewater, NJ");
+        m_listModel_NTPServerList.addElement("2.pool.ntp.org");
+        m_listModel_LocationList.addElement("NTP Pool（Stratum 2）");
     }
     
     private void Initialise_ServerURL_listBox()
@@ -274,25 +277,42 @@ public class GUI extends javax.swing.JFrame implements ActionListener
         jTextField_NumRequestsSent.setText(Integer.toString(m_iNumRequestsSent));
         jTextField_NumResponsesReceived.setText(Integer.toString(m_iNumResponsesReceived));
         
+        String sSuccessRate;
         if (m_iNumRequestsSent > 0)
         {
             double dSuccessRate = (double) m_iNumResponsesReceived / m_iNumRequestsSent * 100.0;
-            jTextField_SuccessRate.setText(String.format("%.1f%%", dSuccessRate));
+            sSuccessRate = String.format("%.1f%%", dSuccessRate);
         }
         else
         {
-            jTextField_SuccessRate.setText("0.0%");
+            sSuccessRate = "0.0%";
         }
+        jTextField_SuccessRate.setText(sSuccessRate);
         
+        String sAvgRTT;
         if (m_iNumResponsesReceived > 0)
         {
             long lAvgRTT = m_lTotalRoundTripTime / m_iNumResponsesReceived;
-            jTextField_AvgRoundTripTime.setText(String.format("%d ms", lAvgRTT));
+            sAvgRTT = String.format("%d ms", lAvgRTT);
         }
         else
         {
-            jTextField_AvgRoundTripTime.setText("0 ms");
+            sAvgRTT = "0 ms";
         }
+        jTextField_AvgRoundTripTime.setText(sAvgRTT);
+        
+        jTextField_NumRequestsSent.repaint();
+        jTextField_NumResponsesReceived.repaint();
+        jTextField_SuccessRate.repaint();
+        jTextField_AvgRoundTripTime.repaint();
+        
+        if (jPanel_Time_Status != null)
+        {
+            jPanel_Time_Status.revalidate();
+            jPanel_Time_Status.repaint();
+        }
+        
+        java.awt.Toolkit.getDefaultToolkit().sync();
     }
     
     void StopTimer()
@@ -547,7 +567,7 @@ public class GUI extends javax.swing.JFrame implements ActionListener
         );
         
         jLabel_NIST_Servers = new JLabel();
-        jLabel_NIST_Servers.setText("提供了多个NIST服务器(可用性可能随时间变化)");
+        jLabel_NIST_Servers.setText("提供了多个NTP服务器（优先推荐国内服务器）");
         jLabel_NTPServerURLs = new JLabel();
         jLabel_NTPServerURLs.setText("NTP服务器URL");
         jLabel_NTPServerLocations = new JLabel();
@@ -574,7 +594,7 @@ public class GUI extends javax.swing.JFrame implements ActionListener
         
         jPanel_NTPServerSelection = new JPanel();
         jPanel_NTPServerSelection.setPreferredSize(new Dimension(500, 300));
-        jPanel_NTPServerSelection.setBorder(BorderFactory.createTitledBorder("NIST / NTP服务器选择"));
+        jPanel_NTPServerSelection.setBorder(BorderFactory.createTitledBorder("NTP服务器选择"));
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel_NTPServerSelection);
         jPanel_NTPServerSelection.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(

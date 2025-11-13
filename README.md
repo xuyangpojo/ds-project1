@@ -1,9 +1,8 @@
 # NTP客户端
 ##### 编译与运行命令
 ```bash
-# 编译（将class文件输出到build目录）
+# 编译
 javac -d build src/ntp_client/*.java
-
 # 运行
 java -cp build ntp_client.GUI
 ```
